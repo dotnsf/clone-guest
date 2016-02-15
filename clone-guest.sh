@@ -19,7 +19,7 @@ source_bridge=br0
 clone_domain_name=$2
 
 domain_image_dir=/var/lib/libvirt/images
-clone_domain_image_path=$domain_image_dir/$clone_domain_name
+clone_domain_image_path=$domain_image_dir/$clone_domain_name.img
 
 
 # --- pre process.
@@ -82,5 +82,29 @@ $cmd_virt_copy_in -d $clone_domain_name \
   $work_dir/70-persistent-net.rules \
   /etc/udev/rules.d/
 
+# --- /etc/sysconfig/network
+$cmd_virt_cat -d $original_domain_name \
+  /etc/sysconfig/network \
+  > $work_dir/network.org
+$cmd_cat $work_dir/network.org \
+  | $cmd_sed "s/$original_domain_name/$clone_domain_name/i" \
+  > $work_dir/network
+$cmd_virt_copy_in -d $clone_domain_name \
+  $work_dir/network \
+  /etc/sysconfig/
 
+
+# --- /etc/hosts
+$cmd_virt_cat -d $original_domain_name \
+  /etc/hosts \
+  > $work_dir/hosts.org
+$cmd_cat $work_dir/hosts.org \
+  | $cmd_sed "s/$original_domain_name/$clone_domain_name/i" \
+  > $work_dir/hosts
+$cmd_virt_copy_in -d $clone_domain_name \
+  $work_dir/hosts \
+  /etc/
+
+# --- start
+$cmd_virsh start $clone_domain_name
 
